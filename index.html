@@ -7,40 +7,92 @@
 <link rel="icon" href="data:,">
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
 <style>
-  body { margin: 0; font: 15px/1.45 system-ui, sans-serif; color: #1c1c1c; background: #f4f4f1; }
+  /* Dark is the default; the button in the header switches to light and the choice is remembered. */
+  :root { color-scheme: dark; --bg: #13151a; --card: #1b1e25; --line: #2b303a; --text: #e8eaf0; --muted: #98a1b0;
+          --accent: #5b9dff; --on-accent: #0b1220; --track: #333945; --err: #ff7b7b; --warn: #f2b25c; --scene: #0e1014; }
+  :root[data-theme=light] { color-scheme: light; --bg: #f4f4f1; --card: #ffffff; --line: #d6d6d0; --text: #1c1c1c; --muted: #5c6068;
+          --accent: #2563eb; --on-accent: #ffffff; --track: #d5d8de; --err: #b00020; --warn: #8a4b00; --scene: #8d949b; }
+  body { margin: 0; font: 15px/1.45 system-ui, sans-serif; color: var(--text); background: var(--bg); }
   /* Desktop: the form scrolls in its own cell; the bar with errors, warnings and Download stays under it. */
-  main { display: grid; grid-template: minmax(0, 1fr) auto / minmax(280px, 360px) 1fr; height: 100vh; height: 100dvh; }
+  main { display: grid; grid-template: minmax(0, 1fr) auto / minmax(300px, 380px) 1fr; height: 100vh; height: 100dvh; }
   form { padding: 16px 16px 0; overflow: auto; }
-  #bar { grid-area: 2 / 1; padding: 10px 16px; background: #f4f4f1; border-top: 1px solid #ccc; max-height: 40vh; overflow: auto; }
+  #bar { grid-area: 2 / 1; padding: 12px 16px; background: var(--bg); border-top: 1px solid var(--line); max-height: 40vh; overflow: auto; }
   #bar p, #bar ul { margin: 0; }
   #bar p:not(:empty), #bar ul:not(:empty) { margin-bottom: 8px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   h1 { font-size: 20px; margin: 0 0 4px; }
-  fieldset { border: 1px solid #ccc; border-radius: 8px; margin: 14px 0; padding: 10px 12px; }
-  label { display: block; margin: 8px 0; }
-  input[type=range], input[type=text], select { width: 100%; box-sizing: border-box; }
-  .err { color: #b00020; margin: 6px 0 0; }
-  #warn { color: #8a4b00; padding-left: 18px; }
-  #dl { font-size: 16px; padding: 10px 16px; width: 100%; }
-  #dl3 { display: flex; gap: 8px; margin: 8px 0 4px; }
+  a { color: var(--accent); }
+  fieldset { border: 1px solid var(--line); border-radius: 16px; background: var(--card); margin: 14px 0; padding: 12px 14px; }
+  legend { padding: 0 6px; font-weight: 600; }
+  label { display: block; margin: 10px 0; }
+  output { font-variant-numeric: tabular-nums; color: var(--accent); }
+  input[type=text], select { width: 100%; box-sizing: border-box; margin-top: 4px; padding: 8px 12px; border-radius: 12px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--text); font: inherit; }
+  input[type=text]:focus-visible, select:focus-visible, button:focus-visible, input[type=range]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  input[type=checkbox] { accent-color: var(--accent); }
+
+  /* Buttons are pills: the main download is filled, the rest are outlined. */
+  button, input[type=file]::file-selector-button { font: inherit; color: var(--text); background: transparent; border: 1px solid var(--line);
+    border-radius: 999px; padding: 7px 16px; cursor: pointer; transition: background .15s, border-color .15s, transform .1s; }
+  input[type=file] { display: block; margin-top: 6px; max-width: 100%; color: var(--muted); }
+  input[type=file]::file-selector-button { margin-right: 10px; }
+  button:hover:not(:disabled), input[type=file]::file-selector-button:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+  button:active:not(:disabled) { transform: scale(.97); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  #dl { font-size: 16px; font-weight: 600; padding: 11px 16px; width: 100%; background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  #dl:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 85%, white); }
+  #dl3 { display: flex; gap: 8px; margin: 8px 0 6px; }
   #dl3 button { flex: 1; padding: 8px 6px; }
-  #view { grid-area: 1 / 2 / 3 / 3; position: relative; }
+  #theme { padding: 6px 12px; flex: none; }
+
+  /* Sliders: a rounded track filled up to the thumb (--fill is set by the script) and a round thumb. */
+  input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; margin: 12px 0 4px; border-radius: 999px; cursor: pointer;
+    background: linear-gradient(to right, var(--accent) var(--fill, 50%), var(--track) var(--fill, 50%)); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--accent);
+    border: 3px solid var(--card); box-shadow: 0 1px 4px rgba(0, 0, 0, .45); transition: transform .12s; }
+  input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--accent);
+    border: 3px solid var(--card); box-shadow: 0 1px 4px rgba(0, 0, 0, .45); transition: transform .12s; }
+  input[type=range]::-moz-range-track { background: transparent; }
+  input[type=range]:hover::-webkit-slider-thumb, input[type=range]:active::-webkit-slider-thumb { transform: scale(1.15); }
+  input[type=range]:hover::-moz-range-thumb, input[type=range]:active::-moz-range-thumb { transform: scale(1.15); }
+
+  #cols { display: flex; gap: 20px; }
+  #cols label { display: flex; align-items: center; gap: 8px; margin: 4px 0 8px; }
+  input[type=color] { width: 44px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 10px; background: none; cursor: pointer; }
+  input[type=color]::-webkit-color-swatch-wrapper { padding: 3px; }
+  input[type=color]::-webkit-color-swatch, input[type=color]::-moz-color-swatch { border: none; border-radius: 7px; }
+  small button { padding: 2px 10px; font-size: inherit; }
+  details { border: 1px solid var(--line); border-radius: 16px; background: var(--card); margin: 14px 0 16px; padding: 10px 14px; }
+  summary { font-weight: 600; cursor: pointer; }
+  details ol { margin: 10px 0 4px; padding-left: 20px; }
+  details li { margin-bottom: 8px; }
+  body.drop::after { content: 'Drop your logo here'; position: fixed; inset: 12px; z-index: 5; display: grid; place-items: center; font-size: 22px; font-weight: 600;
+    color: var(--accent); border: 3px dashed var(--accent); border-radius: 24px; background: color-mix(in srgb, var(--bg) 82%, transparent); pointer-events: none; }
+  .err { color: var(--err); margin: 6px 0 0; }
+  #warn { color: var(--warn); padding-left: 18px; }
+  #view { grid-area: 1 / 2 / 3 / 3; position: relative; background: var(--scene); }
   #view canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-  small { color: #555; }
+  small { color: var(--muted); }
   /* Narrow: the page scrolls (form, then preview) and the bar sticks to the bottom of the window. */
   @media (max-width: 760px) { main { display: block; height: auto; } #view { height: 60vh; } #bar { position: sticky; bottom: 0; } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
+<script>try { if (localStorage.getItem('theme') === 'light') document.documentElement.dataset.theme = 'light'; } catch {}</script>
 </head>
 <body>
 <main>
   <form id="f" onsubmit="return false">
-    <h1>TapStand panel customizer</h1>
+    <header>
+      <h1>TapStand panel customizer</h1>
+      <button type="button" id="theme" aria-label="Switch between dark and light">Light</button>
+    </header>
     <small>Make a logo panel for the TapStand NFC stand. Everything runs in your browser; your files are not uploaded anywhere.</small>
 
     <fieldset>
       <legend>Logo</legend>
       <label>Image (SVG, PNG or JPG; dark shape on a light or transparent background)
         <input type="file" id="logo" accept="image/*,.svg"></label>
-      <small>No logo yet? <a href="starter_template.svg" download>Download the starter SVG</a>, edit its text and upload it here.</small>
+      <small>You can also drop an image anywhere on the page. No logo yet? <button type="button" id="example">Try the example</button> or <a href="starter_template.svg" download>download the starter SVG</a>, edit its text and upload it.</small>
       <label>Width: <output id="logoWv"></output> mm <input type="range" id="logoW" min="20" max="156" value="110"></label>
       <label>Up / down <input type="range" id="logoY" min="10" max="90" value="58"></label>
       <label>Threshold <input type="range" id="thr" min="10" max="245" value="128"></label>
@@ -65,12 +117,23 @@
       <p class="err" id="textErr" role="alert"></p>
     </fieldset>
 
-    <h2 style="font-size:16px">How to print it</h2>
+    <fieldset>
+      <legend>Colours</legend>
+      <div id="cols">
+        <label>Body <input type="color" id="colBody" value="#ffffff"></label>
+        <label>Detail <input type="color" id="colDetail" value="#000000"></label>
+      </div>
+      <small>Shown in the preview and saved in the 3MF files as the two filament colours.</small>
+    </fieldset>
+
+    <details>
+    <summary>How to print it</summary>
     <ol>
-      <li><b>With an AMS:</b> download <i>3MF for AMS</i>, load white in slot 1 and black in slot 2, slice and print. The change at 4.2 mm is already in the file.</li>
-      <li><b>Without an AMS:</b> download <i>3MF with pause</i>. Start with the body colour (white); the printer stops at 4.2 mm. Switch to the detail colour (black), purge until clean, resume.</li>
+      <li><b>With an AMS:</b> download <i>3MF for AMS</i>, load the body colour in slot 1 and the detail colour in slot 2, slice and print. The change at 4.2 mm is already in the file.</li>
+      <li><b>Without an AMS:</b> download <i>3MF with pause</i>. Start with the body colour; the printer stops at 4.2 mm. Switch to the detail colour, purge until clean, resume.</li>
       <li><b>Any other slicer:</b> download the STL. Use 0.20 mm layers, 3 walls, 5 top and 4 bottom layers, 15% infill, no supports, and add a pause or colour change at <b>4.2 mm</b> yourself (Bambu Studio or OrcaSlicer: Preview, layer slider, right-click the +, <i>Add Pause</i>; PrusaSlicer: <i>Add color change</i>).</li>
     </ol>
+    </details>
   </form>
   <div id="view" aria-label="3D preview of the panel"></div>
   <div id="bar">
@@ -108,7 +171,10 @@ catch (e) {
 }
 renderer.setPixelRatio(devicePixelRatio);
 view.append(renderer.domElement);
-const scene = new THREE.Scene(); scene.background = new THREE.Color(0x8d949b);
+const scene = new THREE.Scene();
+// The preview background follows the theme (--scene in the stylesheet).
+const paintScene = () => { scene.background = new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue('--scene').trim()); };
+paintScene();
 const camera = new THREE.PerspectiveCamera(35, 1, 1, 2000); camera.position.set(0, 47, 330);
 const controls = new OrbitControls(camera, renderer.domElement); controls.target.set(0, 47, 0); controls.update();
 scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8a8a, 2.4));
@@ -121,25 +187,65 @@ new ResizeObserver(() => {
   renderer.setSize(w, h, false); camera.aspect = w / h; camera.position.z = Math.max(170, 302 / camera.aspect); camera.updateProjectionMatrix(); draw();
 }).observe(view);
 
-function show(mesh, thinMesh) {
+// What the preview needs to recolour itself and to move the relief while a slider is being dragged.
+let preview = null;
+const inBox = (b, x, y) => b && x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3];
+const boxOf = rings => rings.flat().reduce((b, [x, y]) => [Math.min(b[0], x), Math.min(b[1], y), Math.max(b[2], x), Math.max(b[3], y)], [Infinity, Infinity, -Infinity, -Infinity]);
+
+// boxes = { logo, text }: where each was placed, so every raised triangle can be marked as logo (1) or text (2).
+function show(mesh, thinMesh, boxes = {}) {
   for (const o of group.children) { o.geometry.dispose(); o.material.dispose(); }
   group.clear();
-  const { positions: v, indices: t } = mesh, pos = new Float32Array(t.length * 3), col = new Float32Array(t.length * 3);
+  const { positions: v, indices: t } = mesh, pos = new Float32Array(t.length * 3), part = new Uint8Array(t.length / 3);
+  const area = b => b ? (b[2] - b[0]) * (b[3] - b[1]) : Infinity;
   for (let i = 0; i < t.length; i += 3) {
-    const z = (v[t[i] * 3 + 2] + v[t[i + 1] * 3 + 2] + v[t[i + 2] * 3 + 2]) / 3, c = z > P.BODY + 0.01 ? 0.06 : 0.95;
-    for (let k = 0; k < 3; k++) { pos.set(v.subarray(t[i + k] * 3, t[i + k] * 3 + 3), (i + k) * 3); col.fill(c, (i + k) * 3, (i + k) * 3 + 3); }
+    let x = 0, y = 0, z = 0;
+    for (let k = 0; k < 3; k++) { const o = t[i + k] * 3; pos.set(v.subarray(o, o + 3), (i + k) * 3); x += v[o] / 3; y += v[o + 1] / 3; z += v[o + 2] / 3; }
+    if (z <= P.BODY + 0.01) continue;
+    const l = inBox(boxes.logo, x, y), tx = inBox(boxes.text, x, y);
+    part[i / 3] = l && tx ? (area(boxes.text) < area(boxes.logo) ? 2 : 1) : tx || !boxes.logo ? 2 : 1;
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(pos.length), 3));
   g.computeVertexNormals();
   group.add(new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 })));
+  // A sheet just under the top face, so no hole shows where the relief was while it is being moved.
+  const sheet = new THREE.Mesh(new THREE.PlaneGeometry(P.W - 2 * P.MARGIN, P.H - 2 * P.MARGIN), new THREE.MeshStandardMaterial({ roughness: 0.85 }));
+  sheet.position.set(0, P.H / 2, P.BODY - 0.02); group.add(sheet);
+  let thin = null;
   if (thinMesh) {
     const r = new THREE.BufferGeometry();
     r.setAttribute('position', new THREE.BufferAttribute(thinMesh.positions, 3));
     r.setIndex(new THREE.BufferAttribute(thinMesh.indices, 1));
-    group.add(new THREE.Mesh(r, new THREE.MeshBasicMaterial({ color: 0xe02020 })));
+    thin = new THREE.Mesh(r, new THREE.MeshBasicMaterial({ color: 0xe02020 })); group.add(thin);
   }
+  preview = { g, sheet, thin, part, pos0: pos.slice(), at: { logoW: +$('logoW').value, logoY: +$('logoY').value, textH: +$('textH').value, textY: +$('textY').value } };
+  paint();
+}
+
+// Colour the preview from the two pickers (no rebuild needed).
+function paint() {
+  if (!preview) return;
+  const body = new THREE.Color($('colBody').value), detail = new THREE.Color($('colDetail').value), col = preview.g.attributes.color;
+  for (let f = 0; f < preview.part.length; f++) { const c = preview.part[f] ? detail : body; for (let k = 0; k < 3; k++) col.setXYZ(f * 3 + k, c.r, c.g, c.b); }
+  col.needsUpdate = true; preview.sheet.material.color.copy(body);
+  draw();
+}
+
+// While a size or position slider moves, shift the raised triangles straight away; the exact rebuild follows.
+function nudge() {
+  if (!preview) return;
+  const { at, part, pos0 } = preview, p = preview.g.attributes.position;
+  const sl = +$('logoW').value / at.logoW, st = +$('textH').value / at.textH, ly = +$('logoY').value, ty = +$('textY').value;
+  for (let f = 0; f < part.length; f++) {
+    if (!part[f]) continue;
+    const s = part[f] === 1 ? sl : st, y0 = part[f] === 1 ? at.logoY : at.textY, y1 = part[f] === 1 ? ly : ty;
+    for (let k = 0; k < 3; k++) { const i = (f * 3 + k) * 3; p.setXY(f * 3 + k, pos0[i] * s, (pos0[i + 1] - y0) * s + y1); }
+  }
+  p.needsUpdate = true;
+  if (preview.thin) preview.thin.visible = false;   // the red marks belong to the old position
+  $('logoWv').value = $('logoW').value; $('textHv').value = `${$('textH').value} mm`;
   draw();
 }
 
@@ -183,14 +289,14 @@ async function setFont(src) {
 async function rebuild() {
   $('logoWv').value = $('logoW').value;
   let letters = `${$('textH').value} mm`;
-  let imgErr = logoErr, textErr = fontErr, buildErr = '', shapes = [], out = null;
+  let imgErr = logoErr, textErr = fontErr, buildErr = '', shapes = [], out = null, boxes = {};
   try {
     if (logoRings) {
       // specks under half the minimum width cannot print; what is left must be few enough points to build quickly
       const fit = fitLogo(logoRings, { width: +$('logoW').value, cx: 0, cy: +$('logoY').value, flipY: true }, P.MIN_FEATURE / 2, MAX_POINTS);
       if (fit.problem === 'specks') imgErr = 'Nothing in this image is big enough to print at this width. Make the logo wider.';
       else if (fit.problem) imgErr = DETAILED;
-      else shapes.push({ rings: fit.rings, fillRule: 'EvenOdd' });
+      else { shapes.push({ rings: fit.rings, fillRule: 'EvenOdd' }); boxes.logo = boxOf(fit.rings); }
     }
     const text = $('text').value.trim();
     if (text && font) {
@@ -200,7 +306,7 @@ async function rebuild() {
         const fit = place(textRings(font, text, +$('textH').value), { maxWidth: P.W - 2 * P.MARGIN - 4, cx: 0, cy: +$('textY').value, flipY: true });
         const real = (+$('textH').value * fit.scale).toFixed(1);   // a long line is shrunk to the panel width
         if (+real < +$('textH').value) letters += ` → ${real} mm to fit`;
-        shapes.push({ rings: fit.rings, fillRule: 'NonZero' });
+        shapes.push({ rings: fit.rings, fillRule: 'NonZero' }); boxes.text = boxOf(fit.rings);
       }
     }
     if (wasm.HEAPU8.length > HEAP_LIMIT) wasm = await init();
@@ -208,7 +314,7 @@ async function rebuild() {
   } catch (e) {
     console.error(e);
     buildErr = 'This design could not be turned into a solid. Try a simpler image or shorter text.';
-    shapes = [];
+    shapes = []; boxes = {};
     // a failed build may have left the heap full or broken: show the blank panel from a fresh one
     try { wasm = await init(); out = buildPanel(wasm, []); } catch (e2) { console.error(e2); out = null; }
   }
@@ -220,15 +326,53 @@ async function rebuild() {
   // from the mesh, not the inputs: a design that was cut off entirely leaves a plain one-colour panel
   stl = out.stl; mesh = out.mesh; hasRelief = mesh.positions.some((z, i) => i % 3 === 2 && z > P.BODY + 0.01);
   if (!hasRelief) $('dlAms').disabled = $('dlPause').disabled = true;   // a one-colour panel has nothing to switch
-  show(out.mesh, out.thinMesh);
+  show(out.mesh, out.thinMesh, boxes);
+}
+
+// Theme switch, remembered between visits.
+const setTheme = light => {
+  if (light) document.documentElement.dataset.theme = 'light'; else delete document.documentElement.dataset.theme;
+  $('theme').textContent = light ? 'Dark' : 'Light';
+  try { localStorage.setItem('theme', light ? 'light' : 'dark'); } catch {}
+  paintScene(); draw();
+};
+$('theme').addEventListener('click', () => setTheme(document.documentElement.dataset.theme !== 'light'));
+$('theme').textContent = document.documentElement.dataset.theme === 'light' ? 'Dark' : 'Light';
+// Fill each slider's track up to its thumb.
+for (const r of document.querySelectorAll('input[type=range]')) {
+  const fill = () => r.style.setProperty('--fill', `${(r.value - r.min) / (r.max - r.min) * 100}%`);
+  r.addEventListener('input', fill); fill();
 }
 
 let timer, dirty = false;
 const soon = fn => { clearTimeout(timer); timer = setTimeout(fn, 150); };
 const run = () => { if (dirty) { dirty = false; traceLogo(); } rebuild(); };
-for (const id of ['logoW', 'logoY', 'text', 'textH', 'textY']) $(id).addEventListener('input', () => soon(run));
+for (const id of ['logoW', 'logoY', 'textH', 'textY']) $(id).addEventListener('input', () => { nudge(); soon(run); });
+$('text').addEventListener('input', () => soon(run));
+for (const id of ['colBody', 'colDetail']) $(id).addEventListener('input', paint);
 for (const id of ['thr', 'inv']) $(id).addEventListener('input', () => { dirty = true; soon(run); });
 $('logo').addEventListener('change', e => setLogo(e.target.files[0]));
+// A file from somewhere other than the file dialog: show its name in the file input, then load it.
+function takeLogo(file) {
+  try { const dt = new DataTransfer(); dt.items.add(file); $('logo').files = dt.files; } catch {}
+  return setLogo(file);
+}
+$('example').addEventListener('click', async () => {
+  try { await takeLogo(new File([await (await fetch('starter_template.svg')).blob()], 'starter_template.svg', { type: 'image/svg+xml' })); }
+  catch { logoErr = 'The example could not be loaded.'; rebuild(); }
+});
+// Drop an image (or a font file) anywhere on the page.
+let dragDepth = 0;
+const hasFiles = e => [...(e.dataTransfer?.types || [])].includes('Files');
+addEventListener('dragenter', e => { if (hasFiles(e)) { dragDepth++; document.body.classList.add('drop'); } });
+addEventListener('dragleave', e => { if (hasFiles(e) && --dragDepth <= 0) { dragDepth = 0; document.body.classList.remove('drop'); } });
+addEventListener('dragover', e => { if (hasFiles(e)) e.preventDefault(); });
+addEventListener('drop', e => {
+  if (!hasFiles(e)) return;
+  e.preventDefault(); dragDepth = 0; document.body.classList.remove('drop');
+  const file = e.dataTransfer.files[0]; if (!file) return;
+  if (/\.(ttf|otf)$/i.test(file.name)) { prevFont = 'upload'; $('font').value = 'upload'; setFont(file); } else takeLogo(file);
+});
 $('logoClear').addEventListener('click', () => { $('logo').value = ''; setLogo(null); });
 let prevFont = $('font').value;
 const restoreFont = () => { $('font').value = prevFont; };
@@ -253,7 +397,11 @@ async function save3mf(kind, name) {
     const { project3mf } = await import('./threemf.js');
     settings3mf ??= await (await fetch('bambu_settings.json')).json();
     const z = Math.round((P.BODY + P.STEP) * 100) / 100;
-    save(project3mf({ settings: settings3mf, objects: [{ name: 'panel', mesh, plate: 0, cx: 90, cy: 90 }], plates: [{ events: [{ z, kind }] }] }), name, 'model/3mf');
+    // the two picked colours become the two filaments; anything but white-then-black gets the larger purge volume both ways
+    const colours = [$('colBody').value.toUpperCase(), $('colDetail').value.toUpperCase()], m = settings3mf.flush_volumes_matrix;
+    const settings = { ...settings3mf, filament_colour: colours, filament_multi_colour: colours };
+    if (colours.join() !== settings3mf.filament_colour.join()) { const big = String(Math.max(+m[1], +m[2])); settings.flush_volumes_matrix = ['0', big, big, '0']; }
+    save(project3mf({ settings, objects: [{ name: 'panel', mesh, plate: 0, cx: 90, cy: 90 }], plates: [{ events: [{ z, kind }] }] }), name, 'model/3mf');
   } catch (e) { console.error(e); $('buildErr').textContent = 'The 3MF file could not be made. The STL download still works.'; }
 }
 $('dlAms').addEventListener('click', () => save3mf('colour', 'panel__AMS_colour_change_at_4.2mm.3mf'));

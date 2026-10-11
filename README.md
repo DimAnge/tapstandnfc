@@ -21,16 +21,17 @@ and filament swap. No AMS needed, though it works with one too.
 ## How to use it
 
 1. Open the link above. Nothing to install.
-2. Upload a logo (SVG, PNG or JPG; a dark shape on a light or transparent background) and, if you
-   like, type one line of text such as your @handle. No logo yet? Download the starter SVG from the
-   page, change its text and upload that.
+2. Upload a logo, or drop it anywhere on the page (SVG, PNG or JPG; a dark shape on a light or
+   transparent background) and, if you like, type one line of text such as your @handle. No logo
+   yet? Press *Try the example*, or download the starter SVG, change its text and upload that.
 3. Adjust size and position while watching the 3D preview. Details too thin to print are shown in
-   red.
+   red. Pick the body and detail colours to see how your filaments will look; the 3MF files carry
+   those two colours.
 4. Download the file that suits your printer:
 
 | Download | For | What you do |
 |---|---|---|
-| **3MF for AMS** | Bambu printers with an AMS | White in slot 1, black in slot 2, slice and print. The colour change at 4.2 mm is already in the file. |
+| **3MF for AMS** | Bambu printers with an AMS | Body colour in slot 1, detail colour in slot 2, slice and print. The colour change at 4.2 mm is already in the file. |
 | **3MF with pause (no AMS)** | Bambu printers without an AMS | Start with the body colour. The printer stops at 4.2 mm: swap to the detail colour, purge, resume. |
 | **STL** | Any other slicer | 0.20 mm layers, 3 walls, 5 top and 4 bottom layers, 15% infill. Add a pause or colour change at 4.2 mm yourself. |
 
