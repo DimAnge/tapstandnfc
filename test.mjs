@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { init, buildPanel, outline2d, P, MAX_POINTS } from './core.js';
 import { parse as parseFont } from './vendor/opentype.module.js';
+import { inflateRawSync, deflateRawSync, crc32 } from 'node:zlib';
+import { project3mf, stlToMesh, plateOrigin } from './threemf.js';
 import { flatten, textRings, missingGlyphs, place, maskFromRGBA, traceMask, simplify, dropSpecks, fitLogo, MAX_EDGES } from './shapes.js';
 
 const wasm = await init();
@@ -286,4 +288,73 @@ const sq = (x0, y0, x1, y1) => ({ rings: [[[x0, y0], [x1, y0], [x1, y1], [x0, y1
     checkSolid(buildPanel(wasm, [{ rings: over.rings, fillRule: 'EvenOdd' }]), 5.2);
   }
   console.log('ok  shapes');
+}
+
+// ---- 3MF projects for Bambu Studio
+{
+  const settings = JSON.parse(readFileSync(new URL('./bambu_settings.json', import.meta.url), 'utf8'));
+  const unzip = u8 => {   // minimal reader: checks every entry's CRC and returns name -> text
+    const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength), end = u8.length - 22, out = new Map();
+    assert.equal(dv.getUint32(end, true), 0x06054b50, 'zip end record');
+    let o = dv.getUint32(end + 16, true);
+    for (let i = 0; i < dv.getUint16(end + 10, true); i++) {
+      assert.equal(dv.getUint32(o, true), 0x02014b50, 'zip central record');
+      const method = dv.getUint16(o + 10, true), crc = dv.getUint32(o + 16, true), csize = dv.getUint32(o + 20, true), usize = dv.getUint32(o + 24, true);
+      const nlen = dv.getUint16(o + 28, true), local = dv.getUint32(o + 42, true), name = new TextDecoder().decode(u8.subarray(o + 46, o + 46 + nlen));
+      const start = local + 30 + dv.getUint16(local + 26, true) + dv.getUint16(local + 28, true);
+      const raw = method === 8 ? inflateRawSync(u8.subarray(start, start + csize)) : u8.subarray(start, start + csize);
+      assert.equal(raw.length, usize, `${name} size`); assert.equal(crc32(raw), crc, `${name} crc`);
+      out.set(name, new TextDecoder().decode(raw));
+      o += 46 + nlen + dv.getUint16(o + 30, true) + dv.getUint16(o + 32, true);
+    }
+    return out;
+  };
+  const count = (text, re) => (text.match(re) || []).length;
+
+  // settings template: the values the print guide promises, and nothing personal
+  assert.equal(settings.layer_height, '0.2'); assert.equal(settings.initial_layer_print_height, '0.2');
+  assert.equal(settings.wall_generator, 'arachne'); assert.equal(settings.enable_prime_tower, '0');
+  assert.equal(settings.wall_loops, '3'); assert.equal(settings.top_shell_layers, '5'); assert.equal(settings.bottom_shell_layers, '4');
+  assert.deepEqual(settings.filament_colour, ['#FFFFFF', '#000000']);
+  assert.ok(!/DesignerUserId|@gmail|\/home\//i.test(JSON.stringify(settings)));
+
+  // one panel, as the page makes it
+  const panel = buildPanel(wasm, [sq(-20, 40, 20, 60)]);
+  for (const [kind, expect] of [['colour', 'type="2" extruder="2" color="#000000" extra="" gcode="tool_change"'], ['pause', 'type="1" extruder="1" color="" extra="" gcode="M400 U1"']]) {
+    const files = unzip(project3mf({ settings, objects: [{ name: 'panel', mesh: panel.mesh, plate: 0, cx: 90, cy: 90 }], plates: [{ events: [{ z: 4.2, kind }] }] }));
+    assert.equal([...files.keys()][0], '[Content_Types].xml', 'content types come first');
+    for (const f of ['_rels/.rels', '3D/3dmodel.model', '3D/_rels/3dmodel.model.rels', '3D/Objects/object_1.model', 'Metadata/model_settings.config', 'Metadata/project_settings.config', 'Metadata/custom_gcode_per_layer.xml'])
+      assert.ok(files.has(f), `missing ${f}`);
+    assert.ok(files.get('Metadata/custom_gcode_per_layer.xml').includes(`<layer top_z="4.2" ${expect}/>`), `${kind} event at 4.2`);
+    const model = files.get('3D/Objects/object_1.model');
+    assert.equal(count(model, /<vertex /g), panel.mesh.positions.length / 3); assert.equal(count(model, /<triangle /g), panel.mesh.indices.length / 3);
+    // the panel spans x -84..84, y -6..100, so centring it on a 180 mm bed moves it by 90, 43
+    assert.ok(files.get('3D/3dmodel.model').includes('transform="1 0 0 0 1 0 0 0 1 90 43 0"'), 'panel centred on the plate, sitting on the bed');
+    assert.deepEqual(JSON.parse(files.get('Metadata/project_settings.config')), settings);
+    assert.ok(![...files.values()].some(t => /DesignerUserId/.test(t)), 'no user id in the file');
+  }
+
+  // several plates, per-object filament and settings, compressed
+  assert.deepEqual(plateOrigin(0, 6, 180), [0, 0]); assert.deepEqual(plateOrigin(1, 6, 180), [216, 0]);
+  assert.deepEqual(plateOrigin(3, 6, 180), [0, -216]); assert.deepEqual(plateOrigin(0, 1, 180), [0, 0]);
+  const spec = { settings, objects: [
+    { name: 'a & b', mesh: panel.mesh, plate: 0, cx: 90, cy: 90, filament: 2 },
+    { name: 'c', mesh: panel.mesh, plate: 1, cx: 90, cy: 90, settings: { sparse_infill_density: '20%' } },
+  ], plates: [{ events: [] }, { events: [{ z: 5.2, kind: 'colour' }, { z: 3.6, kind: 'pause' }] }] };
+  const stored = project3mf(spec), packed = project3mf({ ...spec, deflate: deflateRawSync });
+  assert.ok(packed.length < stored.length / 3, 'deflate shrinks the file');
+  const many = unzip(packed);
+  assert.deepEqual([...many], [...unzip(stored)], 'compressed and stored files hold the same content');
+  const conf = many.get('Metadata/model_settings.config'), gc = many.get('Metadata/custom_gcode_per_layer.xml');
+  assert.ok(conf.includes('<metadata key="name" value="a &amp; b"/>\n    <metadata key="extruder" value="2"/>'));
+  assert.ok(conf.includes('<metadata key="sparse_infill_density" value="20%"/>'));
+  assert.equal(count(conf, /<plate>/g), 2); assert.equal(count(gc, /<plate>/g), 2);
+  assert.ok(gc.indexOf('top_z="3.6" type="1"') > 0 && gc.indexOf('top_z="3.6"') < gc.indexOf('top_z="5.2" type="2"'), 'events sorted by height on plate 2');
+  assert.ok(gc.indexOf('<plate_info id="2"/>') < gc.indexOf('top_z="3.6"'), 'events belong to plate 2');
+  assert.ok(many.get('3D/3dmodel.model').includes('transform="1 0 0 0 1 0 0 0 1 306 43 0"'), 'second plate is 216 mm to the right');
+
+  // STL -> mesh keeps every triangle and stays closed
+  const back = stlToMesh(panel.stl);
+  assert.equal(back.indices.length, panel.mesh.indices.length); assert.ok(closed(back));
+  console.log('ok  3mf');
 }

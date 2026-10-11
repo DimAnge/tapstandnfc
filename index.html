@@ -21,6 +21,8 @@
   .err { color: #b00020; margin: 6px 0 0; }
   #warn { color: #8a4b00; padding-left: 18px; }
   #dl { font-size: 16px; padding: 10px 16px; width: 100%; }
+  #dl3 { display: flex; gap: 8px; margin: 8px 0 4px; }
+  #dl3 button { flex: 1; padding: 8px 6px; }
   #view { grid-area: 1 / 2 / 3 / 3; position: relative; }
   #view canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
   small { color: #555; }
@@ -65,10 +67,9 @@
 
     <h2 style="font-size:16px">How to print it</h2>
     <ol>
-      <li>0.20 mm layers, 5 top layers, 4 bottom layers, 15% infill, no supports.</li>
-      <li>Start with the body colour (white).</li>
-      <li>Add a pause at <b>4.2 mm</b>. In Bambu Studio or OrcaSlicer: Preview, layer slider, right-click the +, <i>Add Pause</i>. In PrusaSlicer: <i>Add color change</i>.</li>
-      <li>At the pause, switch to the detail colour (black), purge until clean, resume.</li>
+      <li><b>With an AMS:</b> download <i>3MF for AMS</i>, load white in slot 1 and black in slot 2, slice and print. The change at 4.2 mm is already in the file.</li>
+      <li><b>Without an AMS:</b> download <i>3MF with pause</i>. Start with the body colour (white); the printer stops at 4.2 mm. Switch to the detail colour (black), purge until clean, resume.</li>
+      <li><b>Any other slicer:</b> download the STL. Use 0.20 mm layers, 3 walls, 5 top and 4 bottom layers, 15% infill, no supports, and add a pause or colour change at <b>4.2 mm</b> yourself (Bambu Studio or OrcaSlicer: Preview, layer slider, right-click the +, <i>Add Pause</i>; PrusaSlicer: <i>Add color change</i>).</li>
     </ol>
   </form>
   <div id="view" aria-label="3D preview of the panel"></div>
@@ -76,6 +77,11 @@
     <p class="err" id="buildErr" role="alert"></p>
     <ul id="warn" aria-live="polite"></ul>
     <button type="button" id="dl" disabled>Download STL</button>
+    <div id="dl3">
+      <button type="button" id="dlAms" disabled>3MF for AMS</button>
+      <button type="button" id="dlPause" disabled>3MF with pause (no AMS)</button>
+    </div>
+    <small>The 3MF files open in Bambu Studio with the 4.2 mm colour change or pause already set. They carry an A1 mini profile; pick your own printer when asked.</small>
   </div>
 </main>
 
@@ -90,7 +96,7 @@ const $ = id => document.getElementById(id);
 const DETAILED = 'This image is too detailed to trace. Use a simpler, high-contrast logo, or move the Threshold slider.';
 // The wasm heap only grows (see the note in core.js), so the module is re-created once it passes this size.
 const HEAP_LIMIT = 256 * 2 ** 20;
-let logoImg = null, logoRings = null, logoErr = '', font = null, fontErr = '', stl = null, hasRelief = false;
+let logoImg = null, logoRings = null, logoErr = '', font = null, fontErr = '', stl = null, mesh = null, hasRelief = false;
 
 // ---------- 3D view ----------
 const view = $('view');
@@ -208,11 +214,12 @@ async function rebuild() {
   }
   $('textHv').value = letters;
   $('logoErr').textContent = imgErr; $('textErr').textContent = textErr; $('buildErr').textContent = buildErr;
-  $('dl').disabled = !!(imgErr || textErr || buildErr);
+  $('dl').disabled = $('dlAms').disabled = $('dlPause').disabled = !!(imgErr || textErr || buildErr);
   if (!out) { $('warn').replaceChildren(); return; }
   $('warn').replaceChildren(...out.warnings.map(w => Object.assign(document.createElement('li'), { textContent: w.message })));
   // from the mesh, not the inputs: a design that was cut off entirely leaves a plain one-colour panel
-  stl = out.stl; hasRelief = out.mesh.positions.some((z, i) => i % 3 === 2 && z > P.BODY + 0.01);
+  stl = out.stl; mesh = out.mesh; hasRelief = mesh.positions.some((z, i) => i % 3 === 2 && z > P.BODY + 0.01);
+  if (!hasRelief) $('dlAms').disabled = $('dlPause').disabled = true;   // a one-colour panel has nothing to switch
   show(out.mesh, out.thinMesh);
 }
 
@@ -231,12 +238,26 @@ $('font').addEventListener('change', e => {
 });
 $('fontFile').addEventListener('change', e => e.target.files[0] ? (prevFont = 'upload', setFont(e.target.files[0])) : restoreFont());
 $('fontFile').addEventListener('cancel', restoreFont);
-$('dl').addEventListener('click', () => {
+function save(data, name, type) {
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([stl], { type: 'model/stl' }));
-  a.download = hasRelief ? 'panel__white_then_black_at_4.2mm.stl' : 'panel_blank__one_colour.stl';
+  a.href = URL.createObjectURL(new Blob([data], { type }));
+  a.download = name;
   a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 10000);   // revoking at once can cancel the download in Safari
-});
+}
+$('dl').addEventListener('click', () => save(stl, hasRelief ? 'panel__white_then_black_at_4.2mm.stl' : 'panel_blank__one_colour.stl', 'model/stl'));
+
+// Bambu Studio project with the colour change (AMS) or a pause (no AMS) already placed at 4.2 mm
+let settings3mf;
+async function save3mf(kind, name) {
+  try {
+    const { project3mf } = await import('./threemf.js');
+    settings3mf ??= await (await fetch('bambu_settings.json')).json();
+    const z = Math.round((P.BODY + P.STEP) * 100) / 100;
+    save(project3mf({ settings: settings3mf, objects: [{ name: 'panel', mesh, plate: 0, cx: 90, cy: 90 }], plates: [{ events: [{ z, kind }] }] }), name, 'model/3mf');
+  } catch (e) { console.error(e); $('buildErr').textContent = 'The 3MF file could not be made. The STL download still works.'; }
+}
+$('dlAms').addEventListener('click', () => save3mf('colour', 'panel__AMS_colour_change_at_4.2mm.3mf'));
+$('dlPause').addEventListener('click', () => save3mf('pause', 'panel__no_AMS_pause_at_4.2mm.3mf'));
 await setFont($('font').value);
 </script>
 </body>
