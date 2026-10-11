@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TapStand panel customizer</title>
+<link rel="icon" href="data:,">
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
+<style>
+  body { margin: 0; font: 15px/1.45 system-ui, sans-serif; color: #1c1c1c; background: #f4f4f1; }
+  /* Desktop: the form scrolls in its own cell; the bar with errors, warnings and Download stays under it. */
+  main { display: grid; grid-template: minmax(0, 1fr) auto / minmax(280px, 360px) 1fr; height: 100vh; height: 100dvh; }
+  form { padding: 16px 16px 0; overflow: auto; }
+  #bar { grid-area: 2 / 1; padding: 10px 16px; background: #f4f4f1; border-top: 1px solid #ccc; max-height: 40vh; overflow: auto; }
+  #bar p, #bar ul { margin: 0; }
+  #bar p:not(:empty), #bar ul:not(:empty) { margin-bottom: 8px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  fieldset { border: 1px solid #ccc; border-radius: 8px; margin: 14px 0; padding: 10px 12px; }
+  label { display: block; margin: 8px 0; }
+  input[type=range], input[type=text], select { width: 100%; box-sizing: border-box; }
+  .err { color: #b00020; margin: 6px 0 0; }
+  #warn { color: #8a4b00; padding-left: 18px; }
+  #dl { font-size: 16px; padding: 10px 16px; width: 100%; }
+  #view { grid-area: 1 / 2 / 3 / 3; position: relative; }
+  #view canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  small { color: #555; }
+  /* Narrow: the page scrolls (form, then preview) and the bar sticks to the bottom of the window. */
+  @media (max-width: 760px) { main { display: block; height: auto; } #view { height: 60vh; } #bar { position: sticky; bottom: 0; } }
+</style>
+</head>
+<body>
+<main>
+  <form id="f" onsubmit="return false">
+    <h1>TapStand panel customizer</h1>
+    <small>Make a logo panel for the TapStand NFC stand. Everything runs in your browser; your files are not uploaded anywhere.</small>
+
+    <fieldset>
+      <legend>Logo</legend>
+      <label>Image (SVG, PNG or JPG; dark shape on a light or transparent background)
+        <input type="file" id="logo" accept="image/*,.svg"></label>
+      <small>No logo yet? <a href="starter_template.svg" download>Download the starter SVG</a>, edit its text and upload it here.</small>
+      <label>Width: <output id="logoWv"></output> mm <input type="range" id="logoW" min="20" max="156" value="110"></label>
+      <label>Up / down <input type="range" id="logoY" min="10" max="90" value="58"></label>
+      <label>Threshold <input type="range" id="thr" min="10" max="245" value="128"></label>
+      <label><input type="checkbox" id="inv"> Invert (use for a light shape on a dark background)</label>
+      <button type="button" id="logoClear">Remove logo</button>
+      <p class="err" id="logoErr" role="alert"></p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Text</legend>
+      <label>One line, for example your @handle <input type="text" id="text" placeholder="@yourhandle" maxlength="60"></label>
+      <label>Font
+        <select id="font">
+          <option value="vendor/fonts/Poppins-Bold.ttf">Poppins Bold</option>
+          <option value="vendor/fonts/NotoSans-Bold.ttf">Noto Sans Bold (Greek, Cyrillic and more)</option>
+          <option value="upload">Upload a font (TTF or OTF)…</option>
+        </select></label>
+      <input type="file" id="fontFile" accept=".ttf,.otf" hidden>
+      <label>Letter height: <output id="textHv"></output> <input type="range" id="textH" min="3" max="20" step="0.5" value="6"></label>
+      <label>Up / down <input type="range" id="textY" min="10" max="90" value="18"></label>
+      <small>Joined or right-to-left scripts (Arabic, Hindi…) are not shaped correctly; use a logo image for those.</small>
+      <p class="err" id="textErr" role="alert"></p>
+    </fieldset>
+
+    <h2 style="font-size:16px">How to print it</h2>
+    <ol>
+      <li>0.20 mm layers, 5 top layers, 4 bottom layers, 15% infill, no supports.</li>
+      <li>Start with the body colour (white).</li>
+      <li>Add a pause at <b>4.2 mm</b>. In Bambu Studio or OrcaSlicer: Preview, layer slider, right-click the +, <i>Add Pause</i>. In PrusaSlicer: <i>Add color change</i>.</li>
+      <li>At the pause, switch to the detail colour (black), purge until clean, resume.</li>
+    </ol>
+  </form>
+  <div id="view" aria-label="3D preview of the panel"></div>
+  <div id="bar">
+    <p class="err" id="buildErr" role="alert"></p>
+    <ul id="warn" aria-live="polite"></ul>
+    <button type="button" id="dl" disabled>Download STL</button>
+  </div>
+</main>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from './vendor/OrbitControls.js';
+import { parse as parseFont } from './vendor/opentype.module.js';
+import { init, buildPanel, P, MAX_POINTS } from './core.js';
+import { maskFromRGBA, traceMask, simplify, fitLogo, MAX_EDGES, textRings, missingGlyphs, place } from './shapes.js';
+
+const $ = id => document.getElementById(id);
+const DETAILED = 'This image is too detailed to trace. Use a simpler, high-contrast logo, or move the Threshold slider.';
+// The wasm heap only grows (see the note in core.js), so the module is re-created once it passes this size.
+const HEAP_LIMIT = 256 * 2 ** 20;
+let logoImg = null, logoRings = null, logoErr = '', font = null, fontErr = '', stl = null, hasRelief = false;
+
+// ---------- 3D view ----------
+const view = $('view');
+let wasm, renderer;
+try { wasm = await init(); renderer = new THREE.WebGLRenderer({ antialias: true }); }
+catch (e) {
+  $('buildErr').textContent = 'This page could not start. It needs a current browser with WebGL and WebAssembly.';
+  throw e;   // nothing below can run; Download stays disabled
+}
+renderer.setPixelRatio(devicePixelRatio);
+view.append(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x8d949b);
+const camera = new THREE.PerspectiveCamera(35, 1, 1, 2000); camera.position.set(0, 47, 330);
+const controls = new OrbitControls(camera, renderer.domElement); controls.target.set(0, 47, 0); controls.update();
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8a8a, 2.4));
+const sun = new THREE.DirectionalLight(0xffffff, 1.3); sun.position.set(80, 140, 220); scene.add(sun);
+const group = new THREE.Group(); scene.add(group);
+const draw = () => renderer.render(scene, camera);
+controls.addEventListener('change', draw);
+new ResizeObserver(() => {
+  const w = view.clientWidth, h = view.clientHeight; if (!w || !h) return;
+  renderer.setSize(w, h, false); camera.aspect = w / h; camera.position.z = Math.max(170, 302 / camera.aspect); camera.updateProjectionMatrix(); draw();
+}).observe(view);
+
+function show(mesh, thinMesh) {
+  for (const o of group.children) { o.geometry.dispose(); o.material.dispose(); }
+  group.clear();
+  const { positions: v, indices: t } = mesh, pos = new Float32Array(t.length * 3), col = new Float32Array(t.length * 3);
+  for (let i = 0; i < t.length; i += 3) {
+    const z = (v[t[i] * 3 + 2] + v[t[i + 1] * 3 + 2] + v[t[i + 2] * 3 + 2]) / 3, c = z > P.BODY + 0.01 ? 0.06 : 0.95;
+    for (let k = 0; k < 3; k++) { pos.set(v.subarray(t[i + k] * 3, t[i + k] * 3 + 3), (i + k) * 3); col.fill(c, (i + k) * 3, (i + k) * 3 + 3); }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  g.computeVertexNormals();
+  group.add(new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 })));
+  if (thinMesh) {
+    const r = new THREE.BufferGeometry();
+    r.setAttribute('position', new THREE.BufferAttribute(thinMesh.positions, 3));
+    r.setIndex(new THREE.BufferAttribute(thinMesh.indices, 1));
+    group.add(new THREE.Mesh(r, new THREE.MeshBasicMaterial({ color: 0xe02020 })));
+  }
+  draw();
+}
+
+// ---------- inputs ----------
+function traceLogo() {
+  if (!logoImg) return;   // load errors belong to setLogo and clear only on a new file or Remove
+  logoRings = null; logoErr = '';
+  // An SVG without a size reports 0; a square canvas is fine because drawImage keeps its aspect ratio.
+  const nw = logoImg.naturalWidth || 1600, nh = logoImg.naturalHeight || 1600, s = 1600 / Math.max(nw, nh);
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(nw * s)); c.height = Math.max(1, Math.round(nh * s));
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(logoImg, 0, 0, c.width, c.height);
+  const raw = traceMask(maskFromRGBA(ctx.getImageData(0, 0, c.width, c.height).data, c.width, c.height, +$('thr').value, $('inv').checked), c.width, c.height, MAX_EDGES);
+  if (!raw) { logoErr = DETAILED; return; }
+  // simplify(…, 1): one pixel, so the pixel staircase is gone before any geometry is built
+  const rings = simplify(raw, 1);
+  if (rings.length) logoRings = rings;
+  else logoErr = 'No shape was found in this image. Try the Invert box or move the Threshold slider.';
+}
+
+async function setLogo(file) {
+  logoImg = null; logoRings = null; logoErr = '';
+  if (file) {
+    const img = new Image(); img.src = URL.createObjectURL(file);
+    try { await img.decode(); logoImg = img; traceLogo(); }
+    catch { logoRings = null; logoErr = 'This file could not be read as an image. Use SVG, PNG or JPG.'; }
+  }
+  rebuild();
+}
+
+async function setFont(src) {
+  font = null; fontErr = '';
+  try { font = parseFont(src instanceof File ? await src.arrayBuffer() : await (await fetch(src)).arrayBuffer()); }
+  catch { fontErr = 'This file could not be read as a font. Use a TTF or OTF file.'; }
+  rebuild();
+}
+
+// ---------- build ----------
+// ponytail: builds run on the main thread; move to a Web Worker if complex logos make the sliders stutter.
+async function rebuild() {
+  $('logoWv').value = $('logoW').value;
+  let letters = `${$('textH').value} mm`;
+  let imgErr = logoErr, textErr = fontErr, buildErr = '', shapes = [], out = null;
+  try {
+    if (logoRings) {
+      // specks under half the minimum width cannot print; what is left must be few enough points to build quickly
+      const fit = fitLogo(logoRings, { width: +$('logoW').value, cx: 0, cy: +$('logoY').value, flipY: true }, P.MIN_FEATURE / 2, MAX_POINTS);
+      if (fit.problem === 'specks') imgErr = 'Nothing in this image is big enough to print at this width. Make the logo wider.';
+      else if (fit.problem) imgErr = DETAILED;
+      else shapes.push({ rings: fit.rings, fillRule: 'EvenOdd' });
+    }
+    const text = $('text').value.trim();
+    if (text && font) {
+      const miss = missingGlyphs(font, text);
+      if (miss.length) textErr = `This font has no shape for: ${miss.join(' ')}  Pick another font or upload one.`;
+      else {
+        const fit = place(textRings(font, text, +$('textH').value), { maxWidth: P.W - 2 * P.MARGIN - 4, cx: 0, cy: +$('textY').value, flipY: true });
+        const real = (+$('textH').value * fit.scale).toFixed(1);   // a long line is shrunk to the panel width
+        if (+real < +$('textH').value) letters += ` → ${real} mm to fit`;
+        shapes.push({ rings: fit.rings, fillRule: 'NonZero' });
+      }
+    }
+    if (wasm.HEAPU8.length > HEAP_LIMIT) wasm = await init();
+    out = buildPanel(wasm, shapes);
+  } catch (e) {
+    console.error(e);
+    buildErr = 'This design could not be turned into a solid. Try a simpler image or shorter text.';
+    shapes = [];
+    // a failed build may have left the heap full or broken: show the blank panel from a fresh one
+    try { wasm = await init(); out = buildPanel(wasm, []); } catch (e2) { console.error(e2); out = null; }
+  }
+  $('textHv').value = letters;
+  $('logoErr').textContent = imgErr; $('textErr').textContent = textErr; $('buildErr').textContent = buildErr;
+  $('dl').disabled = !!(imgErr || textErr || buildErr);
+  if (!out) { $('warn').replaceChildren(); return; }
+  $('warn').replaceChildren(...out.warnings.map(w => Object.assign(document.createElement('li'), { textContent: w.message })));
+  // from the mesh, not the inputs: a design that was cut off entirely leaves a plain one-colour panel
+  stl = out.stl; hasRelief = out.mesh.positions.some((z, i) => i % 3 === 2 && z > P.BODY + 0.01);
+  show(out.mesh, out.thinMesh);
+}
+
+let timer, dirty = false;
+const soon = fn => { clearTimeout(timer); timer = setTimeout(fn, 150); };
+const run = () => { if (dirty) { dirty = false; traceLogo(); } rebuild(); };
+for (const id of ['logoW', 'logoY', 'text', 'textH', 'textY']) $(id).addEventListener('input', () => soon(run));
+for (const id of ['thr', 'inv']) $(id).addEventListener('input', () => { dirty = true; soon(run); });
+$('logo').addEventListener('change', e => setLogo(e.target.files[0]));
+$('logoClear').addEventListener('click', () => { $('logo').value = ''; setLogo(null); });
+let prevFont = $('font').value;
+const restoreFont = () => { $('font').value = prevFont; };
+$('font').addEventListener('change', e => {
+  if (e.target.value === 'upload') { $('fontFile').value = ''; $('fontFile').click(); }
+  else { prevFont = e.target.value; setFont(prevFont); }
+});
+$('fontFile').addEventListener('change', e => e.target.files[0] ? (prevFont = 'upload', setFont(e.target.files[0])) : restoreFont());
+$('fontFile').addEventListener('cancel', restoreFont);
+$('dl').addEventListener('click', () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([stl], { type: 'model/stl' }));
+  a.download = hasRelief ? 'panel__white_then_black_at_4.2mm.stl' : 'panel_blank__one_colour.stl';
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 10000);   // revoking at once can cancel the download in Safari
+});
+await setFont($('font').value);
+</script>
+</body>
+</html>
