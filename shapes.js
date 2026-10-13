@@ -28,21 +28,24 @@ export function flatten(cmds, seg = 0.25) {
 // Text outlines sized by cap height. y points down (font convention); place() flips it.
 export function textRings(font, text, capMm) {
   const os2 = font.tables.os2, cap = os2 && os2.sCapHeight ? os2.sCapHeight / font.unitsPerEm : 0.7;
-  return flatten(font.getPath(text, 0, 0, capMm / cap).commands);
+  const size = capMm / cap;
+  // one line per row of text, each centred on x = 0, 1.6 cap heights apart (y grows downward here)
+  return text.split('\n').flatMap((line, i) => flatten(font.getPath(line, -font.getAdvanceWidth(line, size) / 2, i * capMm * 1.6, size).commands));
 }
 
 export function missingGlyphs(font, text) {
   return [...new Set([...text].filter(ch => ch.trim() && font.charToGlyph(ch).index === 0))];
 }
 
-// Scale to `width` (or shrink to `maxWidth`) and centre the bounding box on (cx, cy).
-export function place(rings, { width, maxWidth, cx, cy, flipY = false }) {
+// Scale to `width` (or shrink to `maxWidth` / `maxHeight`) and centre the bounding box on (cx, cy).
+export function place(rings, { width, maxWidth, maxHeight, cx, cy, flipY = false }) {
   let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
   for (const r of rings) for (const [x, y] of r) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
   if (x0 === Infinity) return { rings: [], scale: 1 };
   const w = x1 - x0 || 1;
   let scale = width ? width / w : 1;
   if (maxWidth && w * scale > maxWidth) scale = maxWidth / w;
+  if (maxHeight && (y1 - y0) * scale > maxHeight) scale = maxHeight / (y1 - y0);
   const mx = (x0 + x1) / 2, my = (y0 + y1) / 2, f = flipY ? -1 : 1;
   return { rings: rings.map(r => r.map(([x, y]) => [(x - mx) * scale + cx, f * (y - my) * scale + cy])), scale };
 }

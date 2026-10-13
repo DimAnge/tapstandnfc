@@ -12,7 +12,7 @@ TapStand is a small 3D-printed counter stand: a logo panel at the back and round
 front, each with an NFC tag sealed inside. A customer taps a phone on a button and lands on your
 Instagram, your reviews page, your website or anything else with a link.
 
-This page makes the logo panel. You give it a logo and a line of text; it gives you a file that
+This page makes the logo panel. You give it a logo and some text; it gives you a file that
 fits the stand's base and prints in **two colours on a single-filament printer**, with one pause
 and filament swap. No AMS needed, though it works with one too.
 
@@ -22,8 +22,8 @@ and filament swap. No AMS needed, though it works with one too.
 
 1. Open the link above. Nothing to install.
 2. Upload a logo, or drop it anywhere on the page (SVG, PNG or JPG; a dark shape on a light or
-   transparent background) and, if you like, type one line of text such as your @handle. No logo
-   yet? Press *Try the example*, or download the starter SVG, change its text and upload that.
+   transparent background) and, if you like, type some text such as your @handle, on one line or several. No logo
+   yet? Press *Try the example*, or download the starter SVG, put your own artwork in it and upload that.
 3. Adjust size and position while watching the 3D preview. Details too thin to print are shown in
    red. Pick the body and detail colours to see how your filaments will look; the 3MF files carry
    those two colours.

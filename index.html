@@ -26,9 +26,10 @@
   legend { padding: 0 6px; font-weight: 600; }
   label { display: block; margin: 10px 0; }
   output { font-variant-numeric: tabular-nums; color: var(--accent); }
-  input[type=text], select { width: 100%; box-sizing: border-box; margin-top: 4px; padding: 8px 12px; border-radius: 12px;
+  input[type=text], textarea, select { width: 100%; box-sizing: border-box; margin-top: 4px; padding: 8px 12px; border-radius: 12px;
     border: 1px solid var(--line); background: var(--bg); color: var(--text); font: inherit; }
-  input[type=text]:focus-visible, select:focus-visible, button:focus-visible, input[type=range]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  textarea { resize: vertical; display: block; }
+  input[type=text]:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible, input[type=range]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   input[type=checkbox] { accent-color: var(--accent); }
 
   /* Buttons are pills: the main download is filled, the rest are outlined. */
@@ -92,7 +93,7 @@
       <legend>Logo</legend>
       <label>Image (SVG, PNG or JPG; dark shape on a light or transparent background)
         <input type="file" id="logo" accept="image/*,.svg"></label>
-      <small>You can also drop an image anywhere on the page. No logo yet? <button type="button" id="example">Try the example</button> or <a href="starter_template.svg" download>download the starter SVG</a>, edit its text and upload it.</small>
+      <small>You can also drop an image anywhere on the page. No logo yet? <button type="button" id="example">Try the example</button> or <a href="starter_template.svg" download>download the starter SVG</a>, put your own artwork in it and upload it.</small>
       <label>Width: <output id="logoWv"></output> mm <input type="range" id="logoW" min="20" max="156" value="110"></label>
       <label>Up / down <input type="range" id="logoY" min="10" max="90" value="58"></label>
       <label>Threshold <input type="range" id="thr" min="10" max="245" value="128"></label>
@@ -103,7 +104,7 @@
 
     <fieldset>
       <legend>Text</legend>
-      <label>One line, for example your @handle <input type="text" id="text" placeholder="@yourhandle" maxlength="60"></label>
+      <label>Your text, one or more lines <textarea id="text" placeholder="@yourhandle" rows="2" maxlength="400"></textarea></label>
       <label>Font
         <select id="font">
           <option value="vendor/fonts/Poppins-Bold.ttf">Poppins Bold</option>
@@ -303,8 +304,8 @@ async function rebuild() {
       const miss = missingGlyphs(font, text);
       if (miss.length) textErr = `This font has no shape for: ${miss.join(' ')}  Pick another font or upload one.`;
       else {
-        const fit = place(textRings(font, text, +$('textH').value), { maxWidth: P.W - 2 * P.MARGIN - 4, cx: 0, cy: +$('textY').value, flipY: true });
-        const real = (+$('textH').value * fit.scale).toFixed(1);   // a long line is shrunk to the panel width
+        const fit = place(textRings(font, text, +$('textH').value), { maxWidth: P.W - 2 * P.MARGIN - 4, maxHeight: P.H - 2 * P.MARGIN - 4, cx: 0, cy: +$('textY').value, flipY: true });
+        const real = (+$('textH').value * fit.scale).toFixed(1);   // text too wide or too tall is shrunk to the panel
         if (+real < +$('textH').value) letters += ` → ${real} mm to fit`;
         shapes.push({ rings: fit.rings, fillRule: 'NonZero' }); boxes.text = boxOf(fit.rings);
       }

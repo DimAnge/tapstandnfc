@@ -147,6 +147,13 @@ const sq = (x0, y0, x1, y1) => ({ rings: [[[x0, y0], [x1, y0], [x1, y1], [x0, y1
   const H = textRings(poppins, 'H', 10).flat();
   assert.ok(near(Math.max(...H.map(p => p[1])) - Math.min(...H.map(p => p[1])), 10, 0.3));
 
+  // several lines: stacked 1.6 cap heights apart, each centred on x = 0; maxHeight shrinks a tall block
+  const two = textRings(poppins, 'HHHH\nH', 10), ys = two.flat().map(p => p[1]), top = two.filter(r => r[0][1] <= 0).flat(), low = two.filter(r => r[0][1] > 0).flat();
+  assert.equal(two.length, 5);
+  assert.ok(near(Math.max(...ys) - Math.min(...ys), 26, 0.5));
+  for (const row of [top, low]) assert.ok(near(Math.max(...row.map(p => p[0])) + Math.min(...row.map(p => p[0])), 0, 0.5));
+  assert.ok(near(place(two, { maxWidth: 150, maxHeight: 13, cx: 0, cy: 0 }).scale, 0.5, 0.02));
+
   // Review Focus 3: missing characters are named; whitespace is not "missing"
   assert.deepEqual(missingGlyphs(poppins, 'ΧΟΡΟΣ dance'), ['Χ', 'Ο', 'Ρ', 'Σ']);
   assert.deepEqual(missingGlyphs(noto, 'ΧΟΡΟΣ χορός'), []);

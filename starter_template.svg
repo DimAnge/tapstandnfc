@@ -13,11 +13,11 @@
   </g>
   <circle cx="125" cy="220" r="20" fill="#000"/>
 
-  <!-- Name, tagline and your own line -->
+  <!-- Name, tagline and a line to replace -->
   <g fill="#000" font-family="Arial, Helvetica, sans-serif" font-weight="bold">
     <text x="340" y="185" font-size="150">TapStand</text>
     <text x="346" y="285" font-size="80" letter-spacing="6">NFC stand</text>
     <rect x="40" y="335" width="1120" height="14" rx="7"/>
-    <text x="600" y="442" font-size="88" text-anchor="middle">Insert your own text</text>
+    <text x="600" y="442" font-size="88" text-anchor="middle">Insert your own logo</text>
   </g>
 </svg>
