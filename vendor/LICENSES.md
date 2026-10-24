@@ -7,3 +7,4 @@ Each licence text is in `licenses/` (Poppins: in `fonts/`), copied from the pack
 - opentype.js 1.3.4 (opentype.module.js) — MIT — `licenses/opentype.js-LICENSE.txt` — https://github.com/opentypejs/opentype.js
 - Poppins Bold — SIL Open Font License 1.1 — `fonts/Poppins-OFL.txt` — https://github.com/itfoundry/Poppins
 - Noto Sans Bold — SIL Open Font License 1.1 — `licenses/NotoSans-OFL.txt` — https://github.com/notofonts/latin-greek-cyrillic
+- Roboto (Roboto.ttf, the page's headings) — SIL Open Font License 1.1 — `licenses/Roboto-OFL.txt` — https://github.com/googlefonts/roboto-classic

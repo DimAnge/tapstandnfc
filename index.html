@@ -7,96 +7,95 @@
 <link rel="icon" href="data:,">
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
 <style>
-  /* Dark is the default; the button in the header switches to light and the choice is remembered. */
-  :root { color-scheme: dark; --bg: #13151a; --card: #1b1e25; --line: #2b303a; --text: #e8eaf0; --muted: #98a1b0;
-          --accent: #5b9dff; --on-accent: #0b1220; --track: #333945; --err: #ff7b7b; --warn: #f2b25c; --scene: #0e1014; }
-  :root[data-theme=light] { color-scheme: light; --bg: #f4f4f1; --card: #ffffff; --line: #d6d6d0; --text: #1c1c1c; --muted: #5c6068;
-          --accent: #2563eb; --on-accent: #ffffff; --track: #d5d8de; --err: #b00020; --warn: #8a4b00; --scene: #8d949b; }
-  body { margin: 0; font: 15px/1.45 system-ui, sans-serif; color: var(--text); background: var(--bg); }
+  /* Look shared with the QR stand maker: black (or light) page, monospace text, Roboto capitals for headings,
+     blue accent, square slider handles with mm boxes, dotted preview. Dark is the default; the header button
+     switches to light and the choice is remembered. */
+  @font-face { font-family: Roboto; src: url(vendor/fonts/Roboto.ttf) format('truetype'); font-weight: 100 900; font-display: swap; }
+  :root { color-scheme: dark; --bg: #000; --card: #0b0b0b; --line: #2a2a2a; --text: #f4f4f4; --muted: #8b8b8b;
+          --accent: #2f6bff; --on-accent: #fff; --err: #ff5c5c; --warn: #ffb547; --scene: #060606; --dot: #232323; }
+  :root[data-theme=light] { color-scheme: light; --bg: #f4f4f1; --card: #fff; --line: #d8d8d3; --text: #0a0a0a; --muted: #6b6b6b;
+          --accent: #1f5cff; --on-accent: #fff; --err: #c4001d; --warn: #8a5300; --scene: #8d949b; --dot: #7c838a; }   /* a grey scene, so a white panel shows */
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.5 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; letter-spacing: .02em; color: var(--text); background: var(--bg); }
   /* Desktop: the form scrolls in its own cell; the bar with errors, warnings and Download stays under it. */
-  main { display: grid; grid-template: minmax(0, 1fr) auto / minmax(300px, 380px) 1fr; height: 100vh; height: 100dvh; }
-  form { padding: 16px 16px 0; overflow: auto; }
-  #bar { grid-area: 2 / 1; padding: 12px 16px; background: var(--bg); border-top: 1px solid var(--line); max-height: 40vh; overflow: auto; }
+  main { display: grid; grid-template: minmax(0, 1fr) auto / minmax(340px, 440px) 1fr; height: 100vh; height: 100dvh; }
+  form { padding: 18px 18px 0; overflow: auto; }
+  #bar { grid-area: 2 / 1; padding: 12px 18px 14px; background: var(--bg); border-top: 1px solid var(--line); max-height: 42vh; overflow: auto; }
   #bar p, #bar ul { margin: 0; }
   #bar p:not(:empty), #bar ul:not(:empty) { margin-bottom: 8px; }
-  header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  h1 { font-size: 20px; margin: 0 0 4px; }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  h1, legend, summary { font-family: Roboto, system-ui, sans-serif; text-transform: uppercase; }
+  h1 { font-size: 34px; font-weight: 800; letter-spacing: .05em; margin: 0; line-height: 1.1; }
+  .intro { color: var(--muted); margin: 6px 0 0; }
   a { color: var(--accent); }
-  fieldset { border: 1px solid var(--line); border-radius: 16px; background: var(--card); margin: 14px 0; padding: 12px 14px; }
-  legend { padding: 0 6px; font-weight: 600; }
-  label { display: block; margin: 10px 0; }
-  output { font-variant-numeric: tabular-nums; color: var(--accent); }
-  input[type=text], textarea, select { width: 100%; box-sizing: border-box; margin-top: 4px; padding: 8px 12px; border-radius: 12px;
-    border: 1px solid var(--line); background: var(--bg); color: var(--text); font: inherit; }
-  textarea { resize: vertical; display: block; }
-  input[type=text]:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible, input[type=range]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  fieldset, details { border: 1px solid var(--line); border-radius: 18px; background: var(--card); margin: 14px 0; padding: 10px 14px 12px; }
+  legend { padding: 0 6px; font-size: 20px; font-weight: 800; letter-spacing: .06em; }
+  label { display: block; margin: 10px 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  input[type=text], select, textarea { display: block; width: 100%; margin-top: 4px; padding: 8px 10px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--text); font: inherit; text-transform: none; letter-spacing: 0; }
+  textarea { resize: vertical; }
+  input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  /* a slider row: name, slider, mm box, unit */
+  .f { display: grid; grid-template-columns: 1fr 78px 24px; align-items: center; gap: 8px; margin-top: 4px; }
+  .f span { grid-column: 1 / -1; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-top: 6px; }
+  .f i { font-style: normal; color: var(--muted); font-size: 13px; }
+  input[type=number] { width: 100%; padding: 5px 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text);
+    font: inherit; text-align: right; font-variant-numeric: tabular-nums; }
+  input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 18px; background: transparent; margin: 0; cursor: pointer; }
+  input[type=range]::-webkit-slider-runnable-track { height: 2px; background: var(--line); }
+  input[type=range]::-moz-range-track { height: 2px; background: var(--line); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; margin-top: -5px; background: var(--accent); border: 0; border-radius: 0; }
+  input[type=range]::-moz-range-thumb { width: 12px; height: 12px; background: var(--accent); border: 0; border-radius: 0; }
   input[type=checkbox] { accent-color: var(--accent); }
-
+  input[type=file] { display: block; margin-top: 6px; max-width: 100%; color: var(--muted); font: inherit; text-transform: none; letter-spacing: 0; }
   /* Buttons are pills: the main download is filled, the rest are outlined. */
-  button, input[type=file]::file-selector-button { font: inherit; color: var(--text); background: transparent; border: 1px solid var(--line);
-    border-radius: 999px; padding: 7px 16px; cursor: pointer; transition: background .15s, border-color .15s, transform .1s; }
-  input[type=file] { display: block; margin-top: 6px; max-width: 100%; color: var(--muted); }
+  button, input[type=file]::file-selector-button { font: inherit; text-transform: uppercase; letter-spacing: .08em; font-size: 13px; color: var(--text);
+    background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer; }
   input[type=file]::file-selector-button { margin-right: 10px; }
-  button:hover:not(:disabled), input[type=file]::file-selector-button:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
-  button:active:not(:disabled) { transform: scale(.97); }
-  button:disabled { opacity: .45; cursor: not-allowed; }
-  #dl { font-size: 16px; font-weight: 600; padding: 11px 16px; width: 100%; background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-  #dl:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 85%, white); }
+  button:hover:not(:disabled), input[type=file]::file-selector-button:hover { border-color: var(--text); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  #dl { font-family: Roboto, system-ui, sans-serif; font-weight: 800; font-size: 19px; width: 100%; padding: 10px; background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
   #dl3 { display: flex; gap: 8px; margin: 8px 0 6px; }
   #dl3 button { flex: 1; padding: 8px 6px; }
-  #theme { padding: 6px 12px; flex: none; }
-
-  /* Sliders: a rounded track filled up to the thumb (--fill is set by the script) and a round thumb. */
-  input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; margin: 12px 0 4px; border-radius: 999px; cursor: pointer;
-    background: linear-gradient(to right, var(--accent) var(--fill, 50%), var(--track) var(--fill, 50%)); }
-  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--accent);
-    border: 3px solid var(--card); box-shadow: 0 1px 4px rgba(0, 0, 0, .45); transition: transform .12s; }
-  input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--accent);
-    border: 3px solid var(--card); box-shadow: 0 1px 4px rgba(0, 0, 0, .45); transition: transform .12s; }
-  input[type=range]::-moz-range-track { background: transparent; }
-  input[type=range]:hover::-webkit-slider-thumb, input[type=range]:active::-webkit-slider-thumb { transform: scale(1.15); }
-  input[type=range]:hover::-moz-range-thumb, input[type=range]:active::-moz-range-thumb { transform: scale(1.15); }
-
+  #theme { flex: none; }
   #cols { display: flex; gap: 20px; }
-  #cols label { display: flex; align-items: center; gap: 8px; margin: 4px 0 8px; }
-  input[type=color] { width: 44px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 10px; background: none; cursor: pointer; }
+  #cols label { display: flex; align-items: center; gap: 8px; }
+  input[type=color] { width: 44px; height: 30px; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: none; cursor: pointer; }
   input[type=color]::-webkit-color-swatch-wrapper { padding: 3px; }
-  input[type=color]::-webkit-color-swatch, input[type=color]::-moz-color-swatch { border: none; border-radius: 7px; }
-  small button { padding: 2px 10px; font-size: inherit; }
-  details { border: 1px solid var(--line); border-radius: 16px; background: var(--card); margin: 14px 0 16px; padding: 10px 14px; }
-  summary { font-weight: 600; cursor: pointer; }
+  input[type=color]::-webkit-color-swatch, input[type=color]::-moz-color-swatch { border: none; border-radius: 5px; }
+  small { color: var(--muted); display: block; margin-top: 6px; }
+  small button { padding: 2px 10px; }
+  small:empty { display: none; }
+  summary { font-size: 20px; font-weight: 800; letter-spacing: .06em; cursor: pointer; }
   details ol { margin: 10px 0 4px; padding-left: 20px; }
   details li { margin-bottom: 8px; }
-  body.drop::after { content: 'Drop your logo here'; position: fixed; inset: 12px; z-index: 5; display: grid; place-items: center; font-size: 22px; font-weight: 600;
-    color: var(--accent); border: 3px dashed var(--accent); border-radius: 24px; background: color-mix(in srgb, var(--bg) 82%, transparent); pointer-events: none; }
+  body.drop::after { content: 'Drop your logo here'; position: fixed; inset: 12px; z-index: 5; display: grid; place-items: center; font: 800 28px Roboto, system-ui, sans-serif;
+    text-transform: uppercase; color: var(--text); border: 2px dashed var(--accent); border-radius: 20px; background: color-mix(in srgb, var(--bg) 85%, transparent); pointer-events: none; }
   .err { color: var(--err); margin: 6px 0 0; }
   #warn { color: var(--warn); padding-left: 18px; }
-  #view { grid-area: 1 / 2 / 3 / 3; position: relative; background: var(--scene); }
+  #note { color: var(--muted); }
+  #view { grid-area: 1 / 2 / 3 / 3; position: relative; min-height: 0; background: radial-gradient(var(--dot) 1px, transparent 1.3px) 0 0 / 14px 14px, var(--scene); }
   #view canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-  small { color: var(--muted); }
+  .tip { position: absolute; left: 12px; top: 10px; z-index: 1; color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .08em; pointer-events: none; }
   /* Narrow: the page scrolls (form, then preview) and the bar sticks to the bottom of the window. */
   @media (max-width: 760px) { main { display: block; height: auto; } #view { height: 60vh; } #bar { position: sticky; bottom: 0; } }
-  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 <script>try { if (localStorage.getItem('theme') === 'light') document.documentElement.dataset.theme = 'light'; } catch {}</script>
 </head>
 <body>
 <main>
   <form id="f" onsubmit="return false">
-    <header>
-      <h1>TapStand panel customizer</h1>
-      <button type="button" id="theme" aria-label="Switch between dark and light">Light</button>
-    </header>
-    <small>Make a logo panel for the TapStand NFC stand. Everything runs in your browser; your files are not uploaded anywhere.</small>
+    <div class="top"><h1>TapStand<br>customizer</h1><button type="button" id="theme" aria-label="Switch between dark and light">Light</button></div>
+    <p class="intro">Make a logo panel for the TapStand NFC stand. Everything runs in your browser; your files are not uploaded anywhere.</p>
 
     <fieldset>
       <legend>Logo</legend>
       <label>Image (SVG, PNG or JPG; dark shape on a light or transparent background)
         <input type="file" id="logo" accept="image/*,.svg"></label>
       <small>You can also drop an image anywhere on the page. No logo yet? <button type="button" id="example">Try the example</button> or <a href="starter_template.svg" download>download the starter SVG</a>, put your own artwork in it and upload it.</small>
-      <label>Width: <output id="logoWv"></output> mm <input type="range" id="logoW" min="20" max="156" value="110"></label>
-      <label>Up / down <input type="range" id="logoY" min="10" max="90" value="58"></label>
-      <label>Threshold <input type="range" id="thr" min="10" max="245" value="128"></label>
+      <div class="f"><span>Width</span><input type="range" id="logoW" min="20" max="156" value="110"><input type="number" class="num" data-for="logoW" aria-label="Logo width in mm"><i>mm</i></div>
+      <div class="f"><span>Up / down</span><input type="range" id="logoY" min="10" max="90" value="58"><input type="number" class="num" data-for="logoY" aria-label="Logo height on the panel in mm"><i>mm</i></div>
+      <div class="f"><span>Threshold</span><input type="range" id="thr" min="10" max="245" value="128"><input type="number" class="num" data-for="thr" aria-label="Threshold"><i></i></div>
       <label><input type="checkbox" id="inv"> Invert (use for a light shape on a dark background)</label>
       <button type="button" id="logoClear">Remove logo</button>
       <p class="err" id="logoErr" role="alert"></p>
@@ -112,8 +111,9 @@
           <option value="upload">Upload a font (TTF or OTF)…</option>
         </select></label>
       <input type="file" id="fontFile" accept=".ttf,.otf" hidden>
-      <label>Letter height: <output id="textHv"></output> <input type="range" id="textH" min="3" max="20" step="0.5" value="6"></label>
-      <label>Up / down <input type="range" id="textY" min="10" max="90" value="18"></label>
+      <div class="f"><span>Letter height</span><input type="range" id="textH" min="3" max="20" step="0.5" value="6"><input type="number" class="num" data-for="textH" step="0.5" aria-label="Letter height in mm"><i>mm</i></div>
+      <small id="textHv" aria-live="polite"></small>
+      <div class="f"><span>Up / down</span><input type="range" id="textY" min="10" max="90" value="18"><input type="number" class="num" data-for="textY" aria-label="Text height on the panel in mm"><i>mm</i></div>
       <small>Joined or right-to-left scripts (Arabic, Hindi…) are not shaped correctly; use a logo image for those.</small>
       <p class="err" id="textErr" role="alert"></p>
     </fieldset>
@@ -136,10 +136,11 @@
     </ol>
     </details>
   </form>
-  <div id="view" aria-label="3D preview of the panel"></div>
+  <div id="view" aria-label="3D preview of the panel"><span class="tip">3D · drag to turn</span></div>
   <div id="bar">
     <p class="err" id="buildErr" role="alert"></p>
     <ul id="warn" aria-live="polite"></ul>
+    <p id="note" aria-live="polite"></p>
     <button type="button" id="dl" disabled>Download STL</button>
     <div id="dl3">
       <button type="button" id="dlAms" disabled>3MF for AMS</button>
@@ -165,7 +166,7 @@ let logoImg = null, logoRings = null, logoErr = '', font = null, fontErr = '', s
 // ---------- 3D view ----------
 const view = $('view');
 let wasm, renderer;
-try { wasm = await init(); renderer = new THREE.WebGLRenderer({ antialias: true }); }
+try { wasm = await init(); renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); }
 catch (e) {
   $('buildErr').textContent = 'This page could not start. It needs a current browser with WebGL and WebAssembly.';
   throw e;   // nothing below can run; Download stays disabled
@@ -173,9 +174,7 @@ catch (e) {
 renderer.setPixelRatio(devicePixelRatio);
 view.append(renderer.domElement);
 const scene = new THREE.Scene();
-// The preview background follows the theme (--scene in the stylesheet).
-const paintScene = () => { scene.background = new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue('--scene').trim()); };
-paintScene();
+// No scene background: the dotted backdrop of #view (it follows the theme) shows through.
 const camera = new THREE.PerspectiveCamera(35, 1, 1, 2000); camera.position.set(0, 47, 330);
 const controls = new OrbitControls(camera, renderer.domElement); controls.target.set(0, 47, 0); controls.update();
 scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8a8a, 2.4));
@@ -246,7 +245,7 @@ function nudge() {
   }
   p.needsUpdate = true;
   if (preview.thin) preview.thin.visible = false;   // the red marks belong to the old position
-  $('logoWv').value = $('logoW').value; $('textHv').value = `${$('textH').value} mm`;
+  syncNums();
   draw();
 }
 
@@ -288,8 +287,8 @@ async function setFont(src) {
 // ---------- build ----------
 // ponytail: builds run on the main thread; move to a Web Worker if complex logos make the sliders stutter.
 async function rebuild() {
-  $('logoWv').value = $('logoW').value;
-  let letters = `${$('textH').value} mm`;
+  syncNums();
+  let letters = '';
   let imgErr = logoErr, textErr = fontErr, buildErr = '', shapes = [], out = null, boxes = {};
   try {
     if (logoRings) {
@@ -306,7 +305,7 @@ async function rebuild() {
       else {
         const fit = place(textRings(font, text, +$('textH').value), { maxWidth: P.W - 2 * P.MARGIN - 4, maxHeight: P.H - 2 * P.MARGIN - 4, cx: 0, cy: +$('textY').value, flipY: true });
         const real = (+$('textH').value * fit.scale).toFixed(1);   // text too wide or too tall is shrunk to the panel
-        if (+real < +$('textH').value) letters += ` → ${real} mm to fit`;
+        if (+real < +$('textH').value) letters = `Letters made ${real} mm high to fit the panel.`;
         shapes.push({ rings: fit.rings, fillRule: 'NonZero' }); boxes.text = boxOf(fit.rings);
       }
     }
@@ -319,7 +318,7 @@ async function rebuild() {
     // a failed build may have left the heap full or broken: show the blank panel from a fresh one
     try { wasm = await init(); out = buildPanel(wasm, []); } catch (e2) { console.error(e2); out = null; }
   }
-  $('textHv').value = letters;
+  $('textHv').textContent = letters;
   $('logoErr').textContent = imgErr; $('textErr').textContent = textErr; $('buildErr').textContent = buildErr;
   $('dl').disabled = $('dlAms').disabled = $('dlPause').disabled = !!(imgErr || textErr || buildErr);
   if (!out) { $('warn').replaceChildren(); return; }
@@ -335,15 +334,21 @@ const setTheme = light => {
   if (light) document.documentElement.dataset.theme = 'light'; else delete document.documentElement.dataset.theme;
   $('theme').textContent = light ? 'Dark' : 'Light';
   try { localStorage.setItem('theme', light ? 'light' : 'dark'); } catch {}
-  paintScene(); draw();
+  draw();
 };
 $('theme').addEventListener('click', () => setTheme(document.documentElement.dataset.theme !== 'light'));
 $('theme').textContent = document.documentElement.dataset.theme === 'light' ? 'Dark' : 'Light';
-// Fill each slider's track up to its thumb.
-for (const r of document.querySelectorAll('input[type=range]')) {
-  const fill = () => r.style.setProperty('--fill', `${(r.value - r.min) / (r.max - r.min) * 100}%`);
-  r.addEventListener('input', fill); fill();
-}
+// Every mm box mirrors its slider; a typed value is kept inside the slider's limits (with a note) and set on it.
+function syncNums() { for (const n of document.querySelectorAll('.num')) if (document.activeElement !== n) n.value = $(n.dataset.for).value; }
+for (const n of document.querySelectorAll('.num')) n.addEventListener('change', () => {
+  const s = $(n.dataset.for), v = +n.value, lo = +s.min, hi = +s.max;
+  if (!Number.isFinite(v) || n.value === '') { n.value = s.value; return; }
+  const c = Math.min(hi, Math.max(lo, v));
+  $('note').textContent = c !== v ? `${n.closest('.f').querySelector('span').textContent}: kept between ${lo} and ${hi}.` : '';
+  s.value = c; n.value = s.value;
+  s.dispatchEvent(new Event('input', { bubbles: true }));
+});
+syncNums();
 
 let timer, dirty = false;
 const soon = fn => { clearTimeout(timer); timer = setTimeout(fn, 150); };
