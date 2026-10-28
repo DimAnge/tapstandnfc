@@ -16,29 +16,29 @@
   :root[data-theme=light] { color-scheme: light; --bg: #f4f4f1; --card: #fff; --line: #d8d8d3; --text: #0a0a0a; --muted: #6b6b6b;
           --accent: #1f5cff; --on-accent: #fff; --err: #c4001d; --warn: #8a5300; --scene: #8d949b; --dot: #7c838a; }   /* a grey scene, so a white panel shows */
   * { box-sizing: border-box; }
-  body { margin: 0; font: 15px/1.5 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; letter-spacing: .02em; color: var(--text); background: var(--bg); }
+  body { margin: 0; font: 13.5px/1.45 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; letter-spacing: .02em; color: var(--text); background: var(--bg); }
   /* Desktop: the form scrolls in its own cell; the bar with errors, warnings and Download stays under it. */
-  main { display: grid; grid-template: minmax(0, 1fr) auto / minmax(340px, 440px) 1fr; height: 100vh; height: 100dvh; }
-  form { padding: 18px 18px 0; overflow: auto; }
-  #bar { grid-area: 2 / 1; padding: 12px 18px 14px; background: var(--bg); border-top: 1px solid var(--line); max-height: 42vh; overflow: auto; }
+  main { display: grid; grid-template: minmax(0, 1fr) auto / minmax(300px, 380px) 1fr; height: 100vh; height: 100dvh; }
+  form { padding: 14px 16px 0; overflow: auto; }
+  #bar { grid-area: 2 / 1; padding: 10px 16px 12px; background: var(--bg); border-top: 1px solid var(--line); max-height: 42vh; overflow: auto; }
   #bar p, #bar ul { margin: 0; }
   #bar p:not(:empty), #bar ul:not(:empty) { margin-bottom: 8px; }
   .top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   h1, legend, summary { font-family: Roboto, system-ui, sans-serif; text-transform: uppercase; }
-  h1 { font-size: 34px; font-weight: 800; letter-spacing: .05em; margin: 0; line-height: 1.1; }
+  h1 { font-size: 28px; font-weight: 800; letter-spacing: .05em; margin: 0; line-height: 1.1; }
   .intro { color: var(--muted); margin: 6px 0 0; }
   a { color: var(--accent); }
-  fieldset, details { border: 1px solid var(--line); border-radius: 18px; background: var(--card); margin: 14px 0; padding: 10px 14px 12px; }
-  legend { padding: 0 6px; font-size: 20px; font-weight: 800; letter-spacing: .06em; }
-  label { display: block; margin: 10px 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  fieldset, details { border: 1px solid var(--line); border-radius: 16px; background: var(--card); margin: 12px 0; padding: 8px 12px 10px; }
+  legend { padding: 0 6px; font-size: 17px; font-weight: 800; letter-spacing: .06em; }
+  label { display: block; margin: 8px 0 0; font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
   input[type=text], select, textarea { display: block; width: 100%; margin-top: 4px; padding: 8px 10px; border-radius: 10px;
     border: 1px solid var(--line); background: var(--bg); color: var(--text); font: inherit; text-transform: none; letter-spacing: 0; }
   textarea { resize: vertical; }
   input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   /* a slider row: name, slider, mm box, unit */
-  .f { display: grid; grid-template-columns: 1fr 78px 24px; align-items: center; gap: 8px; margin-top: 4px; }
-  .f span { grid-column: 1 / -1; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-top: 6px; }
-  .f i { font-style: normal; color: var(--muted); font-size: 13px; }
+  .f { display: grid; grid-template-columns: 1fr 68px 22px; align-items: center; gap: 8px; margin-top: 4px; }
+  .f span { grid-column: 1 / -1; font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-top: 6px; }
+  .f i { font-style: normal; color: var(--muted); font-size: 11.5px; }
   input[type=number] { width: 100%; padding: 5px 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text);
     font: inherit; text-align: right; font-variant-numeric: tabular-nums; }
   input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 18px; background: transparent; margin: 0; cursor: pointer; }
@@ -49,14 +49,14 @@
   input[type=checkbox] { accent-color: var(--accent); }
   input[type=file] { display: block; margin-top: 6px; max-width: 100%; color: var(--muted); font: inherit; text-transform: none; letter-spacing: 0; }
   /* Buttons are pills: the main download is filled, the rest are outlined. */
-  button, input[type=file]::file-selector-button { font: inherit; text-transform: uppercase; letter-spacing: .08em; font-size: 13px; color: var(--text);
+  button, input[type=file]::file-selector-button { font: inherit; text-transform: uppercase; letter-spacing: .08em; font-size: 11.5px; color: var(--text);
     background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer; }
   input[type=file]::file-selector-button { margin-right: 10px; }
   button:hover:not(:disabled), input[type=file]::file-selector-button:hover { border-color: var(--text); }
   button:disabled { opacity: .4; cursor: not-allowed; }
-  #dl { font-family: Roboto, system-ui, sans-serif; font-weight: 800; font-size: 19px; width: 100%; padding: 10px; background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  #dl { font-family: Roboto, system-ui, sans-serif; font-weight: 800; font-size: 16px; width: 100%; padding: 10px; background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
   #dl3 { display: flex; gap: 8px; margin: 8px 0 6px; }
-  #dl3 button { flex: 1; padding: 8px 6px; }
+  #dl3 button { flex: 1; padding: 7px 6px; }
   #theme { flex: none; }
   #cols { display: flex; gap: 20px; }
   #cols label { display: flex; align-items: center; gap: 8px; }
@@ -66,7 +66,8 @@
   small { color: var(--muted); display: block; margin-top: 6px; }
   small button { padding: 2px 10px; }
   small:empty { display: none; }
-  summary { font-size: 20px; font-weight: 800; letter-spacing: .06em; cursor: pointer; }
+  [hidden] { display: none !important; }   /* the styled file inputs would otherwise show the hidden font picker */
+  summary { font-size: 17px; font-weight: 800; letter-spacing: .06em; cursor: pointer; }
   details ol { margin: 10px 0 4px; padding-left: 20px; }
   details li { margin-bottom: 8px; }
   body.drop::after { content: 'Drop your logo here'; position: fixed; inset: 12px; z-index: 5; display: grid; place-items: center; font: 800 28px Roboto, system-ui, sans-serif;
@@ -76,7 +77,7 @@
   #note { color: var(--muted); }
   #view { grid-area: 1 / 2 / 3 / 3; position: relative; min-height: 0; background: radial-gradient(var(--dot) 1px, transparent 1.3px) 0 0 / 14px 14px, var(--scene); }
   #view canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-  .tip { position: absolute; left: 12px; top: 10px; z-index: 1; color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .08em; pointer-events: none; }
+  .tip { position: absolute; left: 12px; top: 10px; z-index: 1; color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; pointer-events: none; }
   /* Narrow: the page scrolls (form, then preview) and the bar sticks to the bottom of the window. */
   @media (max-width: 760px) { main { display: block; height: auto; } #view { height: 60vh; } #bar { position: sticky; bottom: 0; } }
 </style>
@@ -103,7 +104,7 @@
 
     <fieldset>
       <legend>Text</legend>
-      <label>Your text, one or more lines <textarea id="text" placeholder="@yourhandle" rows="2" maxlength="400"></textarea></label>
+      <label>Your text, one or more lines <textarea id="text" placeholder="@yourhandle" rows="3" maxlength="400"></textarea></label>
       <label>Font
         <select id="font">
           <option value="vendor/fonts/Poppins-Bold.ttf">Poppins Bold</option>
@@ -400,14 +401,14 @@ $('dl').addEventListener('click', () => save(stl, hasRelief ? 'panel__white_then
 let settings3mf;
 async function save3mf(kind, name) {
   try {
-    const { project3mf } = await import('./threemf.js');
+    const { project3mf, cornerEars } = await import('./threemf.js');
     settings3mf ??= await (await fetch('bambu_settings.json')).json();
     const z = Math.round((P.BODY + P.STEP) * 100) / 100;
     // the two picked colours become the two filaments; anything but white-then-black gets the larger purge volume both ways
     const colours = [$('colBody').value.toUpperCase(), $('colDetail').value.toUpperCase()], m = settings3mf.flush_volumes_matrix;
     const settings = { ...settings3mf, filament_colour: colours, filament_multi_colour: colours };
     if (colours.join() !== settings3mf.filament_colour.join()) { const big = String(Math.max(+m[1], +m[2])); settings.flush_volumes_matrix = ['0', big, big, '0']; }
-    save(project3mf({ settings, objects: [{ name: 'panel', mesh, plate: 0, cx: 90, cy: 90 }], plates: [{ events: [{ z, kind }] }] }), name, 'model/3mf');
+    save(project3mf({ settings, objects: [{ name: 'panel', mesh, plate: 0, cx: 90, cy: 90, parts: [{ name: 'Corner ears (anti-lift, snap off after printing)', mesh: cornerEars(mesh) }] }], plates: [{ events: [{ z, kind }] }] }), name, 'model/3mf');
   } catch (e) { console.error(e); $('buildErr').textContent = 'The 3MF file could not be made. The STL download still works.'; }
 }
 $('dlAms').addEventListener('click', () => save3mf('colour', 'panel__AMS_colour_change_at_4.2mm.3mf'));
