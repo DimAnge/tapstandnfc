@@ -3,7 +3,7 @@
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { deflateRawSync } from 'node:zlib';
-import { project3mf, stlToMesh, cornerEars } from './threemf.js';
+import { project3mf, stlToMesh, tabEars } from './threemf.js';
 
 const dir = process.argv[2];
 if (!dir) throw new Error('usage: node make_release_3mf.mjs <release dir>');
@@ -14,8 +14,9 @@ const folder = (...p) => readdirSync(join(dir, ...p)).filter(f => f.endsWith('.s
 const BUTTON = { bottom_shell_layers: '3', sparse_infill_density: '20%', seam_position: 'back' };   // differs from the panel's settings
 const GRID = [140, 90, 40].flatMap(cy => [40, 90, 140].map(cx => [cx, cy]));                        // nine Ø42 buttons per 180 mm plate
 const buttonPlates = [[...folder('buttons_brand_logos'), ...folder('buttons')]];                    // logos in the top row
-const ears = p => ({ ...p, parts: [{ name: 'Corner ears (anti-lift, snap off after printing)', mesh: cornerEars(p.mesh) }] });
-const base = ears(part('stand', '1_base__one_colour.stl')), panel = ears(part('stand', '2_panel_sample__white_then_black_at_4.2mm.stl'));
+// only the panel gets ears, on its tab
+const ears = p => ({ ...p, parts: [{ name: 'Tab ears (anti-lift, peel off after printing)', mesh: tabEars(p.mesh) }] });
+const base = part('stand', '1_base__one_colour.stl'), panel = ears(part('stand', '2_panel_sample__white_then_black_at_4.2mm.stl'));
 
 for (const [file, colour] of [['TapStand_all_parts__AMS.3mf', 'colour'], ['TapStand_all_parts__no_AMS_pauses.3mf', 'pause']]) {
   const objects = [

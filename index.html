@@ -401,14 +401,14 @@ $('dl').addEventListener('click', () => save(stl, hasRelief ? 'panel__white_then
 let settings3mf;
 async function save3mf(kind, name) {
   try {
-    const { project3mf, cornerEars } = await import('./threemf.js');
+    const { project3mf, tabEars } = await import('./threemf.js');
     settings3mf ??= await (await fetch('bambu_settings.json')).json();
     const z = Math.round((P.BODY + P.STEP) * 100) / 100;
     // the two picked colours become the two filaments; anything but white-then-black gets the larger purge volume both ways
     const colours = [$('colBody').value.toUpperCase(), $('colDetail').value.toUpperCase()], m = settings3mf.flush_volumes_matrix;
     const settings = { ...settings3mf, filament_colour: colours, filament_multi_colour: colours };
     if (colours.join() !== settings3mf.filament_colour.join()) { const big = String(Math.max(+m[1], +m[2])); settings.flush_volumes_matrix = ['0', big, big, '0']; }
-    save(project3mf({ settings, objects: [{ name: 'panel', mesh, plate: 0, cx: 90, cy: 90, parts: [{ name: 'Corner ears (anti-lift, snap off after printing)', mesh: cornerEars(mesh) }] }], plates: [{ events: [{ z, kind }] }] }), name, 'model/3mf');
+    save(project3mf({ settings, objects: [{ name: 'panel', mesh, plate: 0, cx: 90, cy: 90, parts: [{ name: 'Tab ears (anti-lift, peel off after printing)', mesh: tabEars(mesh) }] }], plates: [{ events: [{ z, kind }] }] }), name, 'model/3mf');
   } catch (e) { console.error(e); $('buildErr').textContent = 'The 3MF file could not be made. The STL download still works.'; }
 }
 $('dlAms').addEventListener('click', () => save3mf('colour', 'panel__AMS_colour_change_at_4.2mm.3mf'));

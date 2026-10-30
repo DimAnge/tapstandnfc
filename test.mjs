@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { init, buildPanel, outline2d, P, MAX_POINTS } from './core.js';
 import { parse as parseFont } from './vendor/opentype.module.js';
 import { inflateRawSync, deflateRawSync, crc32 } from 'node:zlib';
-import { project3mf, stlToMesh, plateOrigin } from './threemf.js';
+import { project3mf, stlToMesh, plateOrigin, tabEars } from './threemf.js';
 import { flatten, textRings, missingGlyphs, place, maskFromRGBA, traceMask, simplify, dropSpecks, fitLogo, MAX_EDGES } from './shapes.js';
 
 const wasm = await init();
@@ -363,5 +363,10 @@ const sq = (x0, y0, x1, y1) => ({ rings: [[[x0, y0], [x1, y0], [x1, y1], [x0, y1
   // STL -> mesh keeps every triangle and stays closed
   const back = stlToMesh(panel.stl);
   assert.equal(back.indices.length, panel.mesh.indices.length); assert.ok(closed(back));
+  // ears: two discs, one layer thick, one past each end of the panel's tab and below it (the tab's lowest y is -6)
+  const ears = tabEars(panel.mesh).positions;
+  assert.equal(ears.length / 3, 196);
+  assert.ok(Math.abs(ears[0] + 64.4) < 1 && Math.abs(ears[98 * 3] - 64.4) < 1 && ears[1] < -6 && ears[98 * 3 + 1] < -6);
+  assert.ok(Math.abs(ears[5] - ears[2] - 0.2) < 1e-5);
   console.log('ok  3mf');
 }

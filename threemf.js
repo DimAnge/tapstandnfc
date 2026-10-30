@@ -62,18 +62,19 @@ export function stlToMesh(u8) {
   return { positions: new Float32Array(positions), indices };
 }
 
-// "Mouse ears": a thin disc (radius r, h tall) on each corner of the part's footprint, so the corners do not
-// lift off the bed. Each disc is centred on the footprint point nearest a corner of the bounding box.
-export function cornerEars({ positions: v }, r = 8, h = 0.4, n = 48) {
-  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity, z0 = Infinity;
-  for (let i = 0; i < v.length; i += 3) { x0 = Math.min(x0, v[i]); x1 = Math.max(x1, v[i]); y0 = Math.min(y0, v[i + 1]); y1 = Math.max(y1, v[i + 1]); z0 = Math.min(z0, v[i + 2]); }
-  const positions = [], indices = [];
-  for (const [cx, cy] of [[x0, y0], [x1, y0], [x0, y1], [x1, y1]]) {
-    let best = Infinity, ex = 0, ey = 0;
-    for (let i = 0; i < v.length; i += 3) if (v[i + 2] < z0 + 0.01) {
-      const d = Math.hypot(v[i] - cx, v[i + 1] - cy);
-      if (d < best) { best = d; ex = v[i]; ey = v[i + 1]; }
-    }
+// "Mouse ears" for a panel: a one-layer disc (radius r, h tall) on each of the two bottom corners of its tab (the lowest
+// y of the footprint), so the tab does not lift off the bed. Each overlaps the tab by only `overlap` mm, so it peels off.
+export function tabEars({ positions: v }, r = 5, h = 0.2, overlap = 1.2, n = 48) {
+  let y0 = Infinity, z0 = Infinity;
+  for (let i = 0; i < v.length; i += 3) { y0 = Math.min(y0, v[i + 1]); z0 = Math.min(z0, v[i + 2]); }
+  const foot = [];                               // footprint points on the tab's row
+  for (let i = 0; i < v.length; i += 3) if (v[i + 2] < z0 + 0.01 && v[i + 1] < y0 + 2) foot.push([v[i], v[i + 1]]);
+  const xs = foot.map(p => p[0]), positions = [], indices = [];
+  for (const sx of [-1, 1]) {
+    const cx = sx < 0 ? Math.min(...xs) : Math.max(...xs);
+    let best = Infinity, px = 0, py = 0;
+    for (const [x, y] of foot) { const d = Math.hypot(x - cx, y - y0); if (d < best) { best = d; px = x; py = y; } }
+    const out = (r - overlap) * Math.SQRT1_2, ex = px + sx * out, ey = py - out;
     const b = positions.length / 3;              // b, b+1: bottom and top centre; then n bottom/top rim pairs
     positions.push(ex, ey, z0, ex, ey, z0 + h);
     for (let k = 0; k < n; k++) { const a = 2 * Math.PI * k / n, x = ex + r * Math.cos(a), y = ey + r * Math.sin(a); positions.push(x, y, z0, x, y, z0 + h); }
